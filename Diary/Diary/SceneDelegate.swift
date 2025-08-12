@@ -21,7 +21,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let appDelegate = UIApplication.shared.delegate as? AppDelegate
         appDelegate?.persistentContainer.viewContext
         window = UIWindow(windowScene: windowScene)
-        let navigationController = UINavigationController(rootViewController: ViewController())
+        let navigationController = UINavigationController(rootViewController: DiaryListViewController())
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
     }
