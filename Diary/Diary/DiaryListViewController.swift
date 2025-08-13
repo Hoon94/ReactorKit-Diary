@@ -26,7 +26,7 @@ final class DiaryListViewController: UIViewController {
         
         writeButton.rx.tap
             .bind { [weak self] in
-                let writeViewController = DiaryWriteViewController()
+                let writeViewController = DiaryWriteViewController(reactor: DiaryWriteViewReactor(initialState: .init()))
                 self?.navigationController?.pushViewController(writeViewController, animated: true)
             }.disposed(by: disposeBag)
     }

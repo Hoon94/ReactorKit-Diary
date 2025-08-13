@@ -5,10 +5,15 @@
 //  Created by Daehoon Lee on 8/12/25.
 //
 
+import ReactorKit
+import RxCocoa
 import SnapKit
 import UIKit
 
-final class DiaryWriteViewController: UIViewController {
+final class DiaryWriteViewController: UIViewController, ReactorKit.View {
+    typealias Reactor = DiaryWriteViewReactor
+    
+    var disposeBag = DisposeBag()
     
     private let titleLabel = {
         let label = UILabel()
@@ -42,9 +47,9 @@ final class DiaryWriteViewController: UIViewController {
         return button
     }()
     
-    init() {
+    init(reactor: DiaryWriteViewReactor) {
         super.init(nibName: nil, bundle: nil)
-        
+        self.reactor = reactor
     }
     
     required init?(coder: NSCoder) {
@@ -93,5 +98,34 @@ final class DiaryWriteViewController: UIViewController {
             make.leading.trailing.equalToSuperview().inset(16)
             make.bottom.equalTo(view.safeAreaLayoutGuide).inset(30)
         }
+    }
+    
+    func bind(reactor: DiaryWriteViewReactor) {
+        // TODO: reactor action 호출, reactor state 바인딩
+        titleTextField.rx.text.orEmpty
+            .distinctUntilChanged()
+            .bind { title in
+                reactor.action.onNext(.inputTitle(title))
+            }.disposed(by: disposeBag)
+        
+        contentTextView.rx.text.orEmpty
+            .distinctUntilChanged()
+            .bind { content in
+                reactor.action.onNext(.inputContent(content))
+            }.disposed(by: disposeBag)
+        
+        saveButton.rx.tap
+            .bind {
+                reactor.action.onNext(.save)
+            }.disposed(by: disposeBag)
+        
+        reactor.state
+            .map { state in
+                state.isRequestEnable
+            }
+            .distinctUntilChanged()
+            .bind { [weak self] isRequestEnable in
+                self?.saveButton.isEnabled = isRequestEnable
+            }.disposed(by: disposeBag)
     }
 }
