@@ -127,5 +127,18 @@ final class DiaryWriteViewController: UIViewController, ReactorKit.View {
             .bind { [weak self] isRequestEnable in
                 self?.saveButton.isEnabled = isRequestEnable
             }.disposed(by: disposeBag)
+        
+        reactor.state.map { $0.saveSuccess }
+            .filter{ $0 }
+            .bind { [weak self] _ in
+                self?.navigationController?.popViewController(animated: true)
+            }.disposed(by: disposeBag)
+        
+        reactor.state.compactMap { $0.error }
+            .bind { [weak self] error in
+                let alert = UIAlertController(title: "에러", message: error.description, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "확인", style: .default))
+                self?.navigationController?.present(alert, animated: true)
+            }.disposed(by: disposeBag)
     }
 }
