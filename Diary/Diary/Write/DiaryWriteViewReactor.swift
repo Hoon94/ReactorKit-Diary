@@ -19,6 +19,7 @@ final class DiaryWriteViewReactor: ReactorKit.Reactor {
     enum Mutation {
         case setTitle(String)
         case setContent(String)
+        case saveResult(Result<Bool, CoreDataError>)
     }
     
     struct State {
@@ -28,12 +29,18 @@ final class DiaryWriteViewReactor: ReactorKit.Reactor {
         var isRequestEnable: Bool {
             !title.isEmpty && !content.isEmpty
         }
+        
+        var saveSuccess: Bool = false
+        var error: CoreDataError?
     }
     
     var initialState: State
     
-    init(initialState: State) {
+    private let coreData: DiaryCoreDataProtocol
+    
+    init(initialState: State, coreData: DiaryCoreDataProtocol) {
         self.initialState = initialState
+        self.coreData = coreData
     }
     
     func mutate(action: Action) -> Observable<Mutation> {
@@ -43,7 +50,10 @@ final class DiaryWriteViewReactor: ReactorKit.Reactor {
         case .inputContent(let content):
             return Observable.just(Mutation.setContent(content))
         case .save:
-            return Observable.empty()
+            let entity = DiaryItem(id: NSUUID().uuidString, title: currentState.title, content: currentState.content, createdDate: .now, editedDate: .now)
+            let result = coreData.saveDiary(diary: entity)
+            
+            return Observable.just(Mutation.saveResult(result))
         }
     }
     
@@ -55,6 +65,13 @@ final class DiaryWriteViewReactor: ReactorKit.Reactor {
             state.title = title
         case .setContent(let content):
             state.content = content
+        case .saveResult(let result):
+            switch result {
+            case .success:
+                state.saveSuccess = true
+            case .failure(let error):
+                state.error = error
+            }
         }
         
         return state
