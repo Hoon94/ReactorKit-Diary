@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct DiaryItem {
+struct DiaryItem: Equatable {
     let id: String
     let title: String
     let content: String
