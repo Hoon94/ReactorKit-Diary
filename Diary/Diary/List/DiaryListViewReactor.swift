@@ -23,6 +23,7 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
     }
     
     enum Mutation {
+        case setCellDataList([DiaryListCellData])
         case setList([DiaryItem])
         case setMode(Mode)
         case setSelectedItems(Set<String>)
@@ -32,6 +33,7 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
     
     struct State {
         var mode: Mode = .normal
+        var cellDataList: [DiaryListCellData] = []
         var list: [DiaryItem] = []
         var selectedItems: Set<String> = []
         var deleteSuccess: Bool = false
@@ -51,8 +53,8 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
         switch action {
         case .touchMode:
             return .empty()
-        case .query(let string):
-            return .empty()
+        case .query(let query):
+            return getList(query: query)
         case .selectItem(let id):
             return .empty()
         case .delete:
@@ -64,6 +66,8 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
         var state = state
         
         switch mutation {
+        case .setCellDataList(let cellDataList):
+            state.cellDataList = cellDataList
         case .setList(let list):
             state.list = list
         case .setMode(let mode):
@@ -78,9 +82,39 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
         
         return state
     }
+    
+    private func getList(query: String) -> Observable<Mutation> {
+        let result = coreData.getDiaryList(query: query)
+        
+        switch result {
+        case .success(let list):
+            return Observable.concat(
+                .just(Mutation.setList(list)),
+                createCellData(list: list, mode: currentState.mode, selectedItems: currentState.selectedItems)
+                    .map { Mutation.setCellDataList($0) }
+            )
+        case .failure(let error):
+            return Observable.just(Mutation.setError(error))
+        }
+    }
+    
+    private func createCellData(list: [DiaryItem], mode: Mode, selectedItems: Set<String>) -> Observable<[DiaryListCellData]> {
+        let cellDataList = list.map { item in
+            switch mode {
+            case .normal:
+                return DiaryListCellData(isSelected: nil, diary: item)
+            case .delete:
+                let isSelected = selectedItems.contains(item.id)
+                return DiaryListCellData(isSelected: isSelected, diary: item)
+            }
+        }
+        
+        return .just(cellDataList)
+    }
 }
 
 struct DiaryListCellData: Equatable {
     let isSelected: Bool?
     let diary: DiaryItem
+    let cellId = DiaryListTableViewCell.id
 }

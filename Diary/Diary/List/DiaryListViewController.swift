@@ -44,6 +44,7 @@ final class DiaryListViewController: UIViewController, ReactorKit.View {
         tableView.separatorStyle = .none
         tableView.contentInset = .init(top: 16, left: 0, bottom: 16, right: 0)
         tableView.keyboardDismissMode = .onDrag
+        tableView.register(DiaryListTableViewCell.self, forCellReuseIdentifier: DiaryListTableViewCell.id)
         return tableView
     }()
     
@@ -111,6 +112,20 @@ final class DiaryListViewController: UIViewController, ReactorKit.View {
                 
                 let writeViewController = DiaryWriteViewController(reactor: DiaryWriteViewReactor(initialState: .init(), coreData: DiaryCoreData(viewContext: viewContext)))
                 self?.navigationController?.pushViewController(writeViewController, animated: true)
+            }.disposed(by: disposeBag)
+        
+        textField.rx.text.orEmpty.distinctUntilChanged()
+            .map { Reactor.Action.query($0) }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+        
+        reactor.state.map { $0.cellDataList }
+            .distinctUntilChanged()
+            .bind(to: tableView.rx.items) { tableView, row, cellData in
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: cellData.cellId) as? DiaryListTableViewCell else { return UITableViewCell() }
+                
+                cell.apply(cellData: cellData)
+                return cell
             }.disposed(by: disposeBag)
     }
 }
