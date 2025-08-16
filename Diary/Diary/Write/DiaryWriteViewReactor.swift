@@ -68,6 +68,7 @@ final class DiaryWriteViewReactor: ReactorKit.Reactor {
         case .saveResult(let result):
             switch result {
             case .success:
+                EventBus.shared.publish(event: .refreshList)
                 state.saveSuccess = true
             case .failure(let error):
                 state.error = error

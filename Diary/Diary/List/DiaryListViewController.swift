@@ -127,5 +127,12 @@ final class DiaryListViewController: UIViewController, ReactorKit.View {
                 cell.apply(cellData: cellData)
                 return cell
             }.disposed(by: disposeBag)
+        
+        EventBus.shared.asObservable()
+            .bind { event in
+                if case .refreshList = event {
+                    reactor.action.onNext(.refresh)
+                }
+            }.disposed(by: disposeBag)
     }
 }

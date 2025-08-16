@@ -16,6 +16,7 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
     }
     
     enum Action {
+        case refresh
         case touchMode
         case query(String)
         case selectItem(id: String)
@@ -29,9 +30,11 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
         case setSelectedItems(Set<String>)
         case deleteSuccess(Bool)
         case setError(CoreDataError?)
+        case setQuery(String)
     }
     
     struct State {
+        var query: String = ""
         var mode: Mode = .normal
         var cellDataList: [DiaryListCellData] = []
         var list: [DiaryItem] = []
@@ -51,10 +54,15 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
     
     func mutate(action: Action) -> Observable<Mutation> {
         switch action {
+        case .refresh:
+            return getList(query: currentState.query)
         case .touchMode:
             return .empty()
         case .query(let query):
-            return getList(query: query)
+            return .concat(
+                getList(query: query),
+                .just(Mutation.setQuery(query))
+            )
         case .selectItem(let id):
             return .empty()
         case .delete:
@@ -78,6 +86,8 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
             state.deleteSuccess = isSuccess
         case .setError(let coreDataError):
             state.error = coreDataError
+        case .setQuery(let query):
+            state.query = query
         }
         
         return state
