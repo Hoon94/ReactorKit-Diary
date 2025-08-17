@@ -57,7 +57,15 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
         case .refresh:
             return getList(query: currentState.query)
         case .touchMode:
-            return .empty()
+            return getNewMode()
+                .withUnretained(self)
+                .flatMap { reactor, mode in
+                    Observable.concat(
+                        Observable.just(Mutation.setMode(mode)),
+                        reactor.createCellData(list: reactor.currentState.list, mode: mode, selectedItems: reactor.currentState.selectedItems)
+                            .map { Mutation.setCellDataList($0) }
+                    )
+                }
         case .query(let query):
             return .concat(
                 getList(query: query),
@@ -120,6 +128,16 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
         }
         
         return .just(cellDataList)
+    }
+    
+    private func getNewMode() -> Observable<Mode> {
+        let mode: Mode = if currentState.mode == .normal {
+            .delete
+        } else {
+            .normal
+        }
+        
+        return Observable.just(mode)
     }
 }
 

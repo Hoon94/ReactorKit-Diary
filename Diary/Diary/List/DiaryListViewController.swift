@@ -105,6 +105,11 @@ final class DiaryListViewController: UIViewController, ReactorKit.View {
     }
     
     func bind(reactor: DiaryListViewReactor) {
+        modeButton.rx.tap
+            .map { Reactor.Action.touchMode }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+        
         writeButton.rx.tap
             .bind { [weak self] in
                 guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
@@ -126,6 +131,20 @@ final class DiaryListViewController: UIViewController, ReactorKit.View {
                 
                 cell.apply(cellData: cellData)
                 return cell
+            }.disposed(by: disposeBag)
+        
+        reactor.state.map { $0.mode }
+            .distinctUntilChanged()
+            .withUnretained(self)
+            .bind { viewController, mode in
+                switch mode {
+                case .normal:
+                    viewController.modeButton.setTitle("삭제", for: .normal)
+                    viewController.deleteButton.isHidden = true
+                case .delete:
+                    viewController.modeButton.setTitle("완료", for: .normal)
+                    viewController.deleteButton.isHidden = false
+                }
             }.disposed(by: disposeBag)
         
         EventBus.shared.asObservable()
