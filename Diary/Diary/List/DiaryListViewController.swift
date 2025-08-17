@@ -124,6 +124,26 @@ final class DiaryListViewController: UIViewController, ReactorKit.View {
             .bind(to: reactor.action)
             .disposed(by: disposeBag)
         
+        // mode에 따라 다른 기능 동작
+        // 삭제 - 삭제할 아이템 선택
+        // 일반 - 다이어리 상세로 이동
+        tableView.rx.modelSelected(DiaryListCellData.self)
+            .filter { _ in reactor.currentState.mode == .delete }
+            .map { Reactor.Action.selectItem(id: $0.diary.id) }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+        
+        tableView.rx.modelSelected(DiaryListCellData.self)
+            .filter { _ in reactor.currentState.mode == .normal }
+            .map { Reactor.Action.selectItem(id: $0.diary.id) }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+        
+        deleteButton.rx.tap
+            .map { Reactor.Action.delete }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+        
         reactor.state.map { $0.cellDataList }
             .distinctUntilChanged()
             .bind(to: tableView.rx.items) { tableView, row, cellData in
@@ -145,6 +165,20 @@ final class DiaryListViewController: UIViewController, ReactorKit.View {
                     viewController.modeButton.setTitle("완료", for: .normal)
                     viewController.deleteButton.isHidden = false
                 }
+            }.disposed(by: disposeBag)
+        
+        reactor.pulse(\.$deleteSuccess)
+            .map { _ in Reactor.Action.refresh }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+        
+        reactor.pulse(\.$error)
+            .compactMap { $0 }
+            .withUnretained(self)
+            .bind { viewController, error in
+                let alert = UIAlertController(title: "에러", message: error.description, preferredStyle: .alert)
+                alert.addAction(UIAlertAction.init(title: "확인", style: .default))
+                viewController.navigationController?.present(alert, animated: true)
             }.disposed(by: disposeBag)
         
         EventBus.shared.asObservable()

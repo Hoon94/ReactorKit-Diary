@@ -39,8 +39,8 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
         var cellDataList: [DiaryListCellData] = []
         var list: [DiaryItem] = []
         var selectedItems: Set<String> = []
-        var deleteSuccess: Bool = false
-        var error: CoreDataError?
+        @Pulse var deleteSuccess: Bool = false
+        @Pulse var error: CoreDataError?
     }
     
     var initialState: State
@@ -72,9 +72,26 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
                 .just(Mutation.setQuery(query))
             )
         case .selectItem(let id):
-            return .empty()
+            return updateSelectedItems(id: id)
+                .withUnretained(self)
+                .flatMap { reactor, selectedItems in
+                    Observable.concat(
+                        .just(Mutation.setSelectedItems(selectedItems)),
+                        reactor.createCellData(list: reactor.currentState.list, mode: reactor.currentState.mode, selectedItems: selectedItems)
+                            .map { Mutation.setCellDataList($0) }
+                    )
+                }
         case .delete:
-            return .empty()
+            for id in currentState.selectedItems {
+                if case let .failure(error) = coreData.deleteDiary(id: id) {
+                    return .just(.setError(error))
+                }
+            }
+            
+            return .concat(
+                .just(.deleteSuccess(true)),
+                .just(.setMode(.normal))
+            )
         }
     }
     
@@ -138,6 +155,18 @@ final class DiaryListViewReactor: ReactorKit.Reactor {
         }
         
         return Observable.just(mode)
+    }
+    
+    private func updateSelectedItems(id: String) -> Observable<Set<String>> {
+        var selectedItems = currentState.selectedItems
+        
+        if currentState.selectedItems.contains(id) {
+            selectedItems.remove(id)
+        } else {
+            selectedItems.insert(id)
+        }
+        
+        return .just(selectedItems)
     }
 }
 
