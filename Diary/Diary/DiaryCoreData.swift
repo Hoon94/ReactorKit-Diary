@@ -83,7 +83,7 @@ struct DiaryCoreData: DiaryCoreDataProtocol {
         let fetchRequest: NSFetchRequest<Diary> = Diary.fetchRequest()
         
         if let query = query, !query.isEmpty {
-            let predicate = NSPredicate(format: "title CONTENTS[c] %@", query)
+            let predicate = NSPredicate(format: "title CONTAINS[c] %@", query)
             fetchRequest.predicate = predicate
         }
         
